@@ -1,157 +1,243 @@
+xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>DataBase</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>20</maven.compiler.source>
+        <maven.compiler.target>20</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
+        </dependency>
+    </dependencies>
 
 
-import java.util.*;
+</project>
 
-public class EmployeeAuthorizationSystem {
 
-    private static final Map<String, Employee> employees = new HashMap<>();
 
-    public static void main(String[] args) {
-        // Добавление тестовых данных
-        employees.put("E-000001", new Employee("Кошкин Виталий Андреевич", "Инженер", 70000, "koshkin.v.a", "пароль"));
-        employees.put("A-100987", new Employee("Соболев Леонид Леонидович", "Администратор", 60000, "sobolev.l.l", "пароль"));
-        employees.put("M-425007", new Employee("Иванов Иван Иванович", "Менеджер", 50000, "ivanov.i.i", "пароль"));
-        employees.put("S-000000", new Employee("admin admin admin", "superuser", 0, "admin", "/admin1234"));
+db conn
 
-        Scanner scanner = new Scanner(System.in);
+package data;
 
-        while (true) {
-            System.out.println("Введите команду (вход, регистрация, выход): ");
-            String command = scanner.nextLine();
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
-            if (command.equals("вход")) {
-                login();
-            } else if (command.equals("регистрация")) {
-                register();
-            } else if (command.equals("выход")) {
-                break;
-            } else {
-                System.out.println("Неизвестная команда.");
+public interface DbConnection {
+    default Connection connect(){
+        try {
+            Class.forName("org.postgresql.Driver");
+            Connection connection = DriverManager.getConnection(
+                    "jdbc:postgresql://localhost:5432/users_db",
+                    "postgres",
+                    "admin"
+            );
+
+            System.out.println("Connection succcesed!");
+
+            return connection;
+        } catch (ClassNotFoundException | SQLException e) {
+            System.out.println("Connection failed. Please, try again later.");
+
+            return null;
+        }
+    }
+    void select();
+    void insertUser(User user);
+    void update();
+    void delete();
+}
+
+
+
+
+user
+
+package data;
+
+public class User {
+    private String id;
+    private String lastname;
+    private String firstname;
+    private String patronymic;
+    private String login;
+    private String password;
+    private String post;
+    private double salary;
+
+    public User(String surname, String lastName, String name, String password, String job) {
+        this.id = "1"; //TODO() - generate id
+        this.login = "user"; //TODO() - generate login
+        this.lastname = surname;
+        this.patronymic = lastName;
+        this.firstname = name;
+        this.password = password;
+        this.post = job;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getLastname() {
+        return lastname;
+    }
+
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
+    }
+
+    public String getPatronymic() {
+        return patronymic;
+    }
+
+    public void setPatronymic(String patronymic) {
+        this.patronymic = patronymic;
+    }
+
+    public String getFirstname() {
+        return firstname;
+    }
+
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public void setLogin(String login) {
+        this.login = login;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getPost() {
+        return post;
+    }
+
+    public void setPost(String post) {
+        this.post = post;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public void setSalary(double salary) {
+        this.salary = salary;
+    }
+}
+
+dbmpl
+
+package data;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+public class DbConnectionImpl implements DbConnection{
+    @Override
+    public void select() {
+        try {
+            String request = "SELECT * FROM public.users";
+            Statement statement = connect().createStatement();
+            ResultSet resultSet = statement.executeQuery(request);
+
+            while (resultSet.next()) {
+                var id = resultSet.getLong("id");
+                var username = resultSet.getString("username");
+                var password= resultSet.getString("password");
+
+
+                System.out.println("ID - " + id + ", username - " + username + ", password - " + password);
             }
+        } catch (SQLException e) {
+            System.out.println("Cannot load data from db. Please try again.");
         }
-    }
-
-    private static void login() {
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.println("Введите логин: ");
-        String login = scanner.nextLine();
-
-        System.out.println("Введите пароль: ");
-        String password = scanner.nextLine();
-
-        Employee employee = employees.get(login);
-        if (employee == null || !employee.getPassword().equals(password)) {
-            System.out.println("Неверный логин или пароль.");
-            return;
-        }
-
-        System.out.println("Успешный вход.");
-        System.out.println(getGreetingMessage(employee.getName(), Integer.parseInt(scanner.nextLine())));
-
-        if (employee.getPosition().equals("Инженер")) {
-            System.out.println("Ваш доход: " + employee.getSalary() + " рублей.");
-        } else if (employee.getPosition().equals("Менеджер")) {
-            System.out.println("Ваш доход: " + employee.getSalary() + " рублей.");
-            System.out.println("Доходы сотрудников:");
-            for (Employee otherEmployee : employees.values()) {
-                if (otherEmployee.getPosition().equals("Инженер")) {
-                    System.out.println(otherEmployee.getName() + ": " + otherEmployee.getSalary() + " рублей.");
-                }
-            }
-        } else if (employee.getPosition().equals("Администратор")) {
-            System.out.println("Ваш доход: " + employee.getSalary() + " рублей.");
-            System.out.println("Данные сотрудников:");
-            for (Employee otherEmployee : employees.values()) {
-                System.out.println(otherEmployee.getId() + ": " + otherEmployee.getName() + ", " + otherEmployee.getPosition() + ", " + otherEmployee.getSalary() + " рублей, логин: " + otherEmployee.getLogin() + ", пароль: " + otherEmployee.getPassword());
-            }
-        } else if (employee.getPosition().equals("superuser")) {
-            System.out.println("Добро пожаловать, superuser!");
-        }
-    }
-
-    private static void register() {
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.println("Введите ФИО: ");
-        String name = scanner.nextLine();
-
-        System.out.println("Введите должность (Инженер, Менеджер, Администратор): ");
-        String position = scanner.nextLine();
-
-        System.out.println("Введите пароль: ");
-        String password = scanner.nextLine();
-
-        String login = name.toLowerCase().replace(" ", ".").replace(",", ".");
-        String id = position.substring(0, 1) + "-" + String.format("%06d", employees.size() + 1);
-
-        employees.put(id, new Employee(name, position, position.equals("Инженер") ? (int) (Math.random() * (100000 - 70000) + 70000) : position.equals("Менеджер") ? (int) (Math.random() * (90000 - 50000) + 50000) : (int) (Math.random() * (120000 - 60000) + 60000), login, password));
-
-        System.out.println("Регистрация прошла успешно.");
-
 
     }
 
-    private static String getGreetingMessage(String name, int timeOfDay) {
-        if (timeOfDay >= 4 && timeOfDay < 12) {
-            return "Доброе утро, " + name + "!";
-        } else if (timeOfDay >= 12 && timeOfDay < 17) {
-            return "Добрый день, " + name + "!";
-        } else if (timeOfDay >= 17 && timeOfDay < 22) {
-            return "Добрый вечер, " + name + "!";
-        } else {
-            return "Доброй ночи, " + name + "!";
+    @Override
+    public void insertUser(User user) {
+        try {
+            var request = "INSERT INTO " +
+                    "public.users(id, firstname, lastname, patronymic, login, password, post, salary) " +
+                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+
+            var connection = connect();
+
+            var prepareStatement = connection.prepareStatement(request);
+
+            prepareStatement.setString(1, user.getId());
+            prepareStatement.setString(2, user.getFirstname());
+            prepareStatement.setString(3, user.getLastname());
+            prepareStatement.setString(4, user.getPatronymic());
+            prepareStatement.setString(5, user.getLogin());
+            prepareStatement.setString(6, user.getPassword());
+            prepareStatement.setString(7, user.getPost());
+            prepareStatement.setDouble(8, user.getSalary());
+
+            prepareStatement.executeUpdate();
+
+            System.out.println("Data inserted successfully!");
+
+        } catch (SQLException e) {
+            System.out.println("Data insertion failed. Please, try again!");
+            System.out.println(e);
         }
     }
 
-    private static class Employee {
 
-        private String name;
-        private String position;
-        private int salary;
-        private String login;
-        private String password;
+    @Override
+    public void update() {
 
-        public Employee(String name, String position, int salary, String login, String password) {
-            this.name = name;
-            this.position = position;
-            this.salary = salary;
-            this.login = login;
-            this.password = password;
-        }
+    }
 
-        public String getName() {
-            return name;
-        }
+    @Override
+    public void delete() {
 
-        public String getPosition() {
-            return position;
-        }
-
-        public int getSalary() {
-            return salary;
-        }
-
-        public String getLogin() {
-            return login;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public String getId() {
-            return position.substring(0, 1) + "-" + String.format("%06d", employees.size() + 1);
-        }
     }
 }
 
 
-//        **Инструкция по тестированию программы:**
-//
-//        1. Клонируйте репозиторий с программой с GitHub: `git clone https://github.com/your-username/employee-authorization-system`.
-//        2. Установите Java 8 или выше.
-//        3. Перейдите в каталог с программой: `cd employee-authorization-system`.
-//        4. Скомпилируйте программу: `javac EmployeeAuthorizationSystem.java`.
-//        5. Запустите программу: `java EmployeeAuthorizationSystem`.
-//        6. Выберите команду "вход" или "регистрация" и следуйте инструкциям на экране.
+
+
+app
+
+package app;
+
+import data.DbConnectionImpl;
+import data.User;
+
+public class App {
+    public static void main(String[] args) {
+        DbConnectionImpl dbConnection = new DbConnectionImpl();
+
+        var user = new User("ght", "thg", "hgt", "1234567", "manager");
+        dbConnection.insertUser(user);
+    }
+
+}
